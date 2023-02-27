@@ -24,9 +24,17 @@ def image_grid(imgs, rows, cols):
         grid.paste(img, box=(i % cols * w, i // cols * h))
     return grid
 
-num_images = 2
-width = 400
-height =400
+def create_image(imgs):
+    img_list = []
+    for counter, img in enumerate(imgs):
+        curr_img = Image.new('RGB', size=(width, height))
+        curr_img.paste(img)
+        curr_img.save('C:/Users/phili/PycharmProjects/StableDiffusion/Images/'+ prompt + str(counter) + '.png')
+    return img_list
+
+num_images = int(input('Geben Sie die Anzahl an Bildern ein. '))
+width = int(input('Geben Sie die Breite der Bilder ein. '))
+height = int(input('Geben Sie die Höhe der Bilder ein. '))
 #
 generator = torch.Generator(device=device)
 
@@ -48,7 +56,7 @@ for _ in range(num_images):
 # latents should have shape (4, 4, 64, 64) in this case
 print(latents.shape)
 
-prompt = "doctor and nurse"
+prompt = input('Geben Sie Ihren Prompt ein ')
 
 with torch.autocast("cuda"):
     images = pipe(
@@ -56,7 +64,74 @@ with torch.autocast("cuda"):
         guidance_scale=7.5,
         latents = latents,
     )['images']
-fp = 'C:/Users/phili/PycharmProjects/StableDiffusion/Images/images.png'
-pil_images = image_grid(images, 1, 2)
-pil_images.show()
-pil_images.save(fp=fp)
+counter = 0
+counter = str(counter)
+fp = 'C:/Users/phili/PycharmProjects/StableDiffusion/Images/'+ prompt + counter + '.png'
+list_images = create_image(images)
+# print(images)
+# pil_images = image_grid(images, 1, 2)
+# pil_images.show()
+# pil_images.save(fp=fp)
+
+from deepface import DeepFace
+import os
+
+def main(img_filepath1, img_filepath2, dataset_path):
+    print("start")
+    backends = [
+    'opencv',
+    'ssd',
+    'dlib',
+    'mtcnn',
+    'retinaface',
+    'mediapipe'
+    ]
+
+    # # #face verification
+    # obj = DeepFace.verify(img1_path = img_filepath1, enforce_detection=False,
+    #                       img2_path = img_filepath2,
+    #                       detector_backend = backends[4]
+    #                       )
+    #
+    # # #face recognition
+    # df = DeepFace.find(img_path = img_filepath1, enforce_detection=False,
+    #                    db_path = dataset_path,
+    #                    detector_backend = backends[4]
+    #                    )
+    #
+    #  #embeddings
+    # embedding = DeepFace.represent(img_path = img_filepath1,enforce_detection=False,
+    #          detector_backend = backends[4]
+    #  )
+    #
+    #facial analysis
+    demography = DeepFace.analyze(img_path = img_filepath1, enforce_detection=False,
+            detector_backend = backends[4], actions = ['gender']
+    )
+    #
+    # # face detection and alignment
+    # face = DeepFace.detectFace(img_path = img_filepath1,enforce_detection=False,
+    #        target_size = (224, 224),
+    #       detector_backend = backends[4]
+    # )
+    print(demography)
+    #print(demography['gender'])
+    output_list = []
+    for i in range(len(demography)):
+        output_list.append(demography[i]['gender']['Woman'])
+        output_list.append(demography[i]['gender']['Man'])
+    return output_list
+
+
+
+for count, file in enumerate(os.listdir('Images')):
+    output = main('Images/'+ file, "", "")
+    print(output)
+    with open('example.txt', 'a') as f:
+        if count == 0:
+            for i in range(0, len(output), 2):
+                f.write('Woman ' + str(output[i]) + ' Man '  +  str(output[i +1]) + ' ')
+        else:
+            f.write('\n')
+            for j in range(0, len(output), 2):
+                f.write('Woman ' + str(output[j]) +  ' Man ' + str(output[j + 1]) + ' ')
