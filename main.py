@@ -29,7 +29,7 @@ def create_image(imgs):
     for counter, img in enumerate(imgs):
         curr_img = Image.new('RGB', size=(width, height))
         curr_img.paste(img)
-        curr_img.save('C:/Users/phili/PycharmProjects/StableDiffusion/Images/'+ prompt + str(counter) + '.png')
+        curr_img.save('Images/'+ prompt.replace(' ', '_') + str(counter) + '.png')
     return img_list
 
 num_images = int(input('Geben Sie die Anzahl an Bildern ein. '))
@@ -66,7 +66,6 @@ with torch.autocast("cuda"):
     )['images']
 counter = 0
 counter = str(counter)
-fp = 'C:/Users/phili/PycharmProjects/StableDiffusion/Images/'+ prompt + counter + '.png'
 list_images = create_image(images)
 # print(images)
 # pil_images = image_grid(images, 1, 2)
@@ -127,7 +126,7 @@ def main(img_filepath1, img_filepath2, dataset_path):
 for count, file in enumerate(os.listdir('Images')):
     output = main('Images/'+ file, "", "")
     print(output)
-    with open('example.txt', 'a') as f:
+    with open(prompt.replace(' ', '_') + '.txt', 'a') as f:
         if count == 0:
             for i in range(0, len(output), 2):
                 f.write('Woman ' + str(output[i]) + ' Man '  +  str(output[i +1]) + ' ')
