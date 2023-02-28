@@ -42,7 +42,6 @@ def use_pipeline(prompt):
 
 
 def main(img_filepath1, img_filepath2, dataset_path):
-    print("start")
     backends = [
     'opencv',
     'ssd',
@@ -79,7 +78,6 @@ def main(img_filepath1, img_filepath2, dataset_path):
     #        target_size = (224, 224),
     #       detector_backend = backends[4]
     # )
-    print(demography)
     #print(demography['gender'])
     output_list = []
     for i in range(len(demography)):
@@ -90,7 +88,6 @@ def main(img_filepath1, img_filepath2, dataset_path):
 def analyze(prompt):
     for count, file in enumerate(os.listdir('Images')):
         output = main('Images/'+ file, "", "")
-        print(output)
         with open(prompt.replace(' ', '_') + '.txt', 'a') as f:
             if count == 0:
                 for i in range(0, len(output), 2):
@@ -116,6 +113,7 @@ height = int(input('Geben Sie die Höhe der Bilder ein. '))
 prompt = input('Geben Sie Ihren Prompt ein ')
 
 for i in range(num_images):
+    print(i)
     curr_imgs = use_pipeline(prompt)
     create_image(curr_imgs, prompt, i, width, height)
 
