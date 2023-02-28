@@ -1,47 +1,21 @@
 import torch
 from diffusers import StableDiffusionPipeline
-print(torch.cuda.is_available())
-device = "cuda"
-model_id = "CompVis/stable-diffusion-v1-4"
-pipe = StableDiffusionPipeline.from_pretrained(
-    model_id,
-    revision="fp16",
-    torch_dtype=torch.float16,
-    use_auth_token='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',
-).to(device)
-#
 from PIL import Image
+from deepface import DeepFace
+import os
 
 
-def image_grid(imgs, rows, cols):
-    assert len(imgs) == rows * cols
 
-    w, h = imgs[0].size
-    grid = Image.new('RGB', size=(cols * w, rows * h))
-    grid_w, grid_h = grid.size
 
-    for i, img in enumerate(imgs):
-        grid.paste(img, box=(i % cols * w, i // cols * h))
-    return grid
+def create_image(imgs, prompt, counter, width, height):
+    curr_img = Image.new('RGB', size=(width, height))
+    curr_img.paste(imgs[0])
+    curr_img.save('Images/'+ prompt.replace(' ', '_') + str(counter) + '.png')
 
-def create_image(imgs):
-    img_list = []
-    for counter, img in enumerate(imgs):
-        curr_img = Image.new('RGB', size=(width, height))
-        curr_img.paste(img)
-        curr_img.save('Images/'+ prompt.replace(' ', '_') + str(counter) + '.png')
-    return img_list
-
-num_images = int(input('Geben Sie die Anzahl an Bildern ein. '))
-width = int(input('Geben Sie die Breite der Bilder ein. '))
-height = int(input('Geben Sie die Höhe der Bilder ein. '))
-#
-generator = torch.Generator(device=device)
-
-latents = None
-seeds = []
-for _ in range(num_images):
-    # Get a new random seed, store it and use it as the generator state
+def use_pipeline(prompt):
+    generator = torch.Generator(device=device)
+    latents = None
+    seeds = []
     seed = generator.seed()
     seeds.append(seed)
     generator = generator.manual_seed(seed)
@@ -52,28 +26,20 @@ for _ in range(num_images):
         device=device
     )
     latents = image_latents if latents is None else torch.cat((latents, image_latents))
+    with torch.autocast("cuda"):
+        images = pipe(
+            [prompt] * 1,
+            guidance_scale=7.5,
+            latents = latents,
+        )['images']
+    return images
 
-# latents should have shape (4, 4, 64, 64) in this case
-print(latents.shape)
 
-prompt = input('Geben Sie Ihren Prompt ein ')
-
-with torch.autocast("cuda"):
-    images = pipe(
-        [prompt] * num_images,
-        guidance_scale=7.5,
-        latents = latents,
-    )['images']
-counter = 0
-counter = str(counter)
-list_images = create_image(images)
 # print(images)
 # pil_images = image_grid(images, 1, 2)
 # pil_images.show()
 # pil_images.save(fp=fp)
 
-from deepface import DeepFace
-import os
 
 def main(img_filepath1, img_filepath2, dataset_path):
     print("start")
@@ -121,16 +87,38 @@ def main(img_filepath1, img_filepath2, dataset_path):
         output_list.append(demography[i]['gender']['Man'])
     return output_list
 
+def analyze(prompt):
+    for count, file in enumerate(os.listdir('Images')):
+        output = main('Images/'+ file, "", "")
+        print(output)
+        with open(prompt.replace(' ', '_') + '.txt', 'a') as f:
+            if count == 0:
+                for i in range(0, len(output), 2):
+                    f.write('Woman ' + str(output[i]) + ' Man '  +  str(output[i +1]) + ' ')
+            else:
+                f.write('\n')
+                for j in range(0, len(output), 2):
+                    f.write('Woman ' + str(output[j]) +  ' Man ' + str(output[j + 1]) + ' ')
+print(torch.cuda.is_available())
+device = "cuda"
+model_id = "CompVis/stable-diffusion-v1-4"
+pipe = StableDiffusionPipeline.from_pretrained(
+    model_id,
+    revision="fp16",
+    torch_dtype=torch.float16,
+    use_auth_token='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',
+).to(device)
+
+num_images = int(input('Anzahl an Bildern. '))
+width = int(input('Geben Sie die Breite der Bilder ein. '))
+height = int(input('Geben Sie die Höhe der Bilder ein. '))
+
+prompt = input('Geben Sie Ihren Prompt ein ')
+
+for i in range(num_images):
+    curr_imgs = use_pipeline(prompt)
+    create_image(curr_imgs, prompt, i, width, height)
 
 
-for count, file in enumerate(os.listdir('Images')):
-    output = main('Images/'+ file, "", "")
-    print(output)
-    with open(prompt.replace(' ', '_') + '.txt', 'a') as f:
-        if count == 0:
-            for i in range(0, len(output), 2):
-                f.write('Woman ' + str(output[i]) + ' Man '  +  str(output[i +1]) + ' ')
-        else:
-            f.write('\n')
-            for j in range(0, len(output), 2):
-                f.write('Woman ' + str(output[j]) +  ' Man ' + str(output[j + 1]) + ' ')
+analyze(prompt)
+
