@@ -13,14 +13,17 @@ def create_image(imgs, prompt, counter, width, height):
     curr_img.paste(imgs[0])
     curr_img.save('Images/'+ prompt.replace(' ', '_') + '_' + str(counter) + '.png')
 
-def use_pipeline(prompt):
+def use_pipeline(prompt, input_seed):
     generator = torch.Generator(device=device)
     latents = None
     seeds = []
-    seed = generator.seed()
+    if not input_seed:
+        seed = generator.seed()
+    else:
+        seed = input_seed
+
     seeds.append(seed)
     generator = generator.manual_seed(seed)
-
     image_latents = torch.randn(
         (1, pipe.unet.in_channels, height // 8, width // 8),
         generator=generator,
@@ -36,6 +39,21 @@ def use_pipeline(prompt):
     nsfw = images['nsfw_content_detected']
     images = images['images']
     return images, nsfw
+
+
+def seed_req(num_images):
+    random_seed = input('Random seed? (y/n)')
+    if random_seed != 'y':
+        seeds = []
+        seed_asc = input('Seed ascending? (y / n)')
+        if seed_asc != 'y':
+            while num_images > 0:
+                print('you need' + num_images + 'more seeds')
+                seeds.append = input('Which seeds do you want to use? Enter one seed')
+                num_images -= 1
+        else:
+            seeds = range(0, num_images)
+        return seeds
 
 
 # print(images)
@@ -148,4 +166,5 @@ else:
 
 # df2 = pd.read_csv('man.csv') # read csv file
 # print(df2)
+
 
