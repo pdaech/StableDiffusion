@@ -3,6 +3,7 @@ from diffusers import StableDiffusionPipeline
 from PIL import Image
 from deepface import DeepFace
 import os
+import pandas as pd
 
 
 
@@ -10,7 +11,7 @@ import os
 def create_image(imgs, prompt, counter, width, height):
     curr_img = Image.new('RGB', size=(width, height))
     curr_img.paste(imgs[0])
-    curr_img.save('Images/'+ prompt.replace(' ', '_') + str(counter) + '.png')
+    curr_img.save('Images/'+ prompt.replace(' ', '_') + '_' + str(counter) + '.png')
 
 def use_pipeline(prompt):
     generator = torch.Generator(device=device)
@@ -31,8 +32,10 @@ def use_pipeline(prompt):
             [prompt] * 1,
             guidance_scale=7.5,
             latents = latents,
-        )['images']
-    return images
+            )
+    nsfw = images['nsfw_content_detected']
+    images = images['images']
+    return images, nsfw
 
 
 # print(images)
@@ -86,37 +89,63 @@ def main(img_filepath1, img_filepath2, dataset_path):
     return output_list
 
 def analyze(prompt):
+    df = pd.DataFrame()
+    all_outputs = []
+    lengths = []
     for count, file in enumerate(os.listdir('Images')):
-        output = main('Images/'+ file, "", "")
-        with open(prompt.replace(' ', '_') + '.txt', 'a') as f:
-            if count == 0:
-                for i in range(0, len(output), 2):
-                    f.write('Woman ' + str(output[i]) + ' Man '  +  str(output[i +1]) + ' ')
-            else:
-                f.write('\n')
-                for j in range(0, len(output), 2):
-                    f.write('Woman ' + str(output[j]) +  ' Man ' + str(output[j + 1]) + ' ')
-print(torch.cuda.is_available())
-device = "cuda"
-model_id = "CompVis/stable-diffusion-v1-4"
-pipe = StableDiffusionPipeline.from_pretrained(
-    model_id,
-    revision="fp16",
-    torch_dtype=torch.float16,
-    use_auth_token='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',
-).to(device)
-
-num_images = int(input('Anzahl an Bildern. '))
-width = int(input('Geben Sie die Breite der Bilder ein. '))
-height = int(input('Geben Sie die Höhe der Bilder ein. '))
-
-prompt = input('Geben Sie Ihren Prompt ein ')
-
-for i in range(num_images):
-    print(i)
-    curr_imgs = use_pipeline(prompt)
-    create_image(curr_imgs, prompt, i, width, height)
+        if file.split('_')[:-1] == prompt.split(' '):
+            output = main('Images/'+ file, "", "")
+            lengths.append(int(len(output)/2))
+            all_outputs.append(output)
+    max_length = max(lengths)
+    columns = []
+    for i in range(0, max_length):
+        columns.append(str(i) + ' Woman')
+        columns.append(str(i) + ' Man')
+    columns = ['num_faces'] + columns
+    for idx, elem in enumerate(all_outputs):
+        if lengths[idx] < max_length:
+            for j in range(int(max_length - lengths[idx])*2):
+                elem.append(0.0)
+        all_outputs[idx] = [lengths[idx]] + elem
+    # print(all_outputs)
+    # print(columns)
+    df = pd.DataFrame(all_outputs, columns = columns)
+    df.to_csv(prompt.replace(' ', '_') + '.csv', index=False)
 
 
-analyze(prompt)
+
+if input('a to only analyze ') == 'a':
+    analyze(input('Filename '))
+else:
+    print(torch.cuda.is_available())
+    device = "cuda"
+    model_id = "CompVis/stable-diffusion-v1-4"
+    pipe = StableDiffusionPipeline.from_pretrained(
+        model_id,
+        revision="fp16",
+        torch_dtype=torch.float16,
+        use_auth_token='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',
+    ).to(device)
+    num_images = int(input('Anzahl an Bildern. '))
+    width = int(input('Geben Sie die Breite der Bilder ein. '))
+    height = int(input('Geben Sie die Höhe der Bilder ein. '))
+    prompt = input('Geben Sie Ihren Prompt ein ')
+    # seeds = seed_req(num_images)
+    # max_images = num_images
+    # no_nsfw = 1
+    cn = 0
+    while num_images > 0:
+        curr_imgs, nsfw = use_pipeline(prompt, [])
+        if nsfw[0]:
+            # seeds[num_images] = max_images + no_nsfw
+            pass
+        elif not nsfw[0]:
+            create_image(curr_imgs, prompt, cn, width, height)
+            cn += 1
+            num_images -=1
+    analyze(prompt)
+
+# df2 = pd.read_csv('man.csv') # read csv file
+# print(df2)
 
