@@ -154,6 +154,7 @@ else:
     # no_nsfw = 1
     cn = 0
     while num_images > 0:
+        print(num_images)
         curr_imgs, nsfw = use_pipeline(prompt, [])
         if nsfw[0]:
             # seeds[num_images] = max_images + no_nsfw
