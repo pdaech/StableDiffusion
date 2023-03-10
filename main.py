@@ -110,9 +110,10 @@ def analyze(prompt):
     df = pd.DataFrame()
     all_outputs = []
     lengths = []
-    for count, file in enumerate(os.listdir('Images')):
+    for count, file in enumerate(sorted(os.listdir('Images'))):
         if file.split('_')[:-1] == prompt.split(' '):
             output = main('Images/'+ file, "", "")
+            print(file)
             lengths.append(int(len(output)/2))
             all_outputs.append(output)
     max_length = max(lengths)
