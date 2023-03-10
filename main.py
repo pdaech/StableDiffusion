@@ -4,6 +4,7 @@ from PIL import Image
 from deepface import DeepFace
 import os
 import pandas as pd
+import re
 
 
 
@@ -106,11 +107,15 @@ def main(img_filepath1, img_filepath2, dataset_path):
         output_list.append(demography[i]['gender']['Man'])
     return output_list
 
+
+def natural_sort_key(s):
+    """Function to use as a key for sorting"""
+    return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', s)]
 def analyze(prompt):
     df = pd.DataFrame()
     all_outputs = []
     lengths = []
-    for count, file in enumerate(sorted(os.listdir('Images'))):
+    for count, file in enumerate(sorted(os.listdir('Images'), key=natural_sort_key)):
         if file.split('_')[:-1] == prompt.split(' '):
             output = main('Images/'+ file, "", "")
             print(file)
@@ -131,6 +136,7 @@ def analyze(prompt):
     # print(columns)
     df = pd.DataFrame(all_outputs, columns = columns)
     df.to_csv(prompt.replace(' ', '_') + '.csv', index=False)
+
 
 
 
