@@ -150,7 +150,7 @@ else:
         model_id,
         revision="fp16",
         torch_dtype=torch.float16,
-        use_auth_token='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',
+        use_auth_token=os.environ.get("HF_TOKEN"),
     ).to(device)
     num_images = int(input('Anzahl an Bildern. '))
     width = int(input('Geben Sie die Breite der Bilder ein. '))
